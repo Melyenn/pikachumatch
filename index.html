@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pikachu Game</title>
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/Melyenn/pokemonGame@main/img/0.png" type="image/x-icon" />
+    <script src="https://unpkg.com/@farcade/game-sdk@latest/dist/index.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #000;
+        font-family: 'Arial', sans-serif;
+      }
+
+      .emulator-frame {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        background: #1a1a1a;
+        border-radius: 10px;
+        padding: 1px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .emulator-header {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 6px;
+        color: white;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .game-container {
+        position: relative;
+        width: 100%;
+        padding-top: 160%;
+        background: #000;
+        overflow: hidden;
+        border-radius: 0 0 10px 0;
+      }
+
+      #gameCanvas {
+        position: absolute;
+        top: 50px;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        border-radius: 0 0 10px 0;
+
+      }
+
+      #ui {
+        position: absolute;
+        top: 0px; 
+        left: 0px;
+        height: 100px;
+        width: 100%;
+        text-align: center;
+        color: #0ff;
+        font-family: 'Arial', sans-serif;
+        font-size: 21px;
+        text-shadow: 0 0 10px #0ff;
+        z-index: 2;
+        display: flex;
+        flex-direction: rows;
+        align-items: center;
+        justify-content: center;
+        background: black;
+        gap: .25rem;
+      }
+
+      .screen {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: #0ff;
+        text-align: center;
+        padding: 20px;
+        width: 80%;
+        border-radius: 10px;
+        z-index: 3;
+        border: 2px solid #0ff;
+        text-shadow: 0 0 10px #0ff;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+      }
+
+      .touch-controls {
+        position: absolute;
+        bottom: 40px;
+        width: 100%;
+        display: none;
+        justify-content: center;
+        gap: 40px;
+        z-index: 2;
+      }
+
+      .touch-btn {
+        width: 60px;
+        height: 60px;
+        background: rgba(0, 255, 255, 0.2);
+        border: 2px solid #0ff;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #0ff;
+      }
+
+      button {
+        font-size: 1rem;
+        padding: .25rem .75rem;
+        background-color: #0ff;
+        color: #121212;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+      }
+
+      @media (max-width: 768px) {
+        .touch-controls {
+          display: flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="emulator-frame">
+      <div class="emulator-header">
+        <div>Pikachu</div>
+        <p style="font-size: 12px; color: #888">Mini App</p>
+      </div>
+      <div class="game-container">
+        <div id="ui">
+          Level: <span id="lv">1</span>|
+          Score: <span id="score">0</span>| 
+          Time left: <span id="time">0</span>s
+          <button id="hint" onclick="openHint(); this.blur();">Hint</button>        
+        </div>
+
+
+        <div id="startScreen" class="screen">
+          <h1>PIKACHU</h1>
+          <!-- <p>Avoid the walls!</p> -->
+          <!-- <p>← → to move</p> -->
+          <!-- <p>Press Space to Start</p> -->
+          <p>Match 2 same </p>
+          <p>← → to move</p>
+          <p>Press Enter/ click/ touch to select tiles</p>
+          <p>Press H or click Hint to buy hint (30p/ hint)</p>
+          <button onclick="startGame()">
+            Play 
+          </button>
+        </div>
+        <div id="gameOverScreen" class="screen" style="display: none">
+          <h1 class="content">GAME OVER</h1>
+          <p>Score: <span id="finalScore">0</span></p>
+          <button onclick="check()">
+            Continue
+          </button>
+
+        </div>
+       
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      const container = document.getElementById("game-container");
+      const startScreen = document.getElementById('startScreen');
+      const gameOverScreen = document.getElementById('gameOverScreen');
+      const scoreDisplay = document.getElementById('score');
+      const levelDisplay = document.getElementById('lv');
+      const timeDisplay = document.getElementById('time');
+      const finalScoreDisplay = document.getElementById('finalScore');     
+
+      const content = document.querySelector('.content');
+      const announ = document.querySelector('.announ');
+      canvas.width = 500
+      canvas.height = 800
+
+      let rows = 16;
+      let cols = 9;
+      let tileSize;
+      let width;
+      let height;
+
+      const imageCache = {};
+
+      let gameState = 'start';
+      let score = 0;
+      let timeLeft = 30;
+      let lv = 1;
+
+      let tiles = [];
+      let selectedTiles = [];
+      let hintTiles = [];
+      let selectedPos = { x: 0, y: 0 };
+      let timerInterval;
+      
+      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pokemon@main/img/';
+      const icons = Array.from({ length: 21 }, (_, i) => `${CDN_BASE}${i}.png`);
+      const BACKGROUND_SRC = 'https://cdn.jsdelivr.net/gh/Melyenn/pokemon@main/background/bg.png';
+      icons.push(BACKGROUND_SRC);
+
+
+      // Input handlers
+      document.addEventListener('keydown', (e) => {
+        let drew = false;
+        if (gameState === 'start' && e.key === 'Enter') {
+          startGame();
+          gameState = 'playing';
+        } else if (gameState === 'playing') {
+          switch (e.key) {
+            case 'ArrowUp': if (selectedPos.y > 0) selectedPos.y--; break;
+            case 'ArrowDown': if (selectedPos.y < rows - 1) selectedPos.y++; break;
+            case 'ArrowLeft': if (selectedPos.x > 0) selectedPos.x--; break;
+            case 'ArrowRight': if (selectedPos.x < cols - 1) selectedPos.x++; break;
+            case 'H': {
+              openHint();
+              break;
+            }
+            case 'Enter': {
+              drew = handleEnter();
+              break;
+            }
+          }
+          if (!drew) drawTiles();
+        } else if (gameState === 'gameover' && e.key === 'Enter') {
+          startGame();
+          gameState = 'playing';
+        } else if (gameState === 'paused' && e.key === 'Enter') {
+          gameOverScreen.style.display = 'none';
+          gameState = 'playing';
+        }
+      });
+     
+      function openHint() {
+        if (gameState != 'playing') return;
+        if (score >= 30) {
+          score -= 30;
+        } else {
+          noenoughPoint(); 
+          return; 
+        }
+        const result = existsValidMove();
+        if (result) {
+          const { a: tile1, b: tile2 } = result;
+          const path = canConnect(tile1, tile2);
+          if (path) {
+            hintTiles = [tile1, tile2];
+            drawTiles();
+            drawPath(path);
+            setTimeout(() => {
+              hintTiles = [];
+              drawTiles();
+            }, 3000);
+          }
+        }
+      }
+
+
+      function handleEnter() {
+        const index = selectedPos.y * cols + selectedPos.x;
+        const tile = tiles[index];
+        if (tile && !tile.hidden && selectedTiles.length < 2 && !selectedTiles.includes(tile)) {
+          selectedTiles.push(tile);
+          if (selectedTiles.length === 2) {
+            const [a, b] = selectedTiles;
+            if (a.icon === b.icon) {
+              const path = canConnect(a, b);
+              if (path) {
+                score += 5 * lv;
+                scoreDisplay.textContent = score;
+                a.hidden = true;
+                b.hidden = true;
+                drawTiles();
+                drawPath(path);
+                setTimeout(() => {
+                  selectedTiles = [];
+                  if (tiles.every(t => t.hidden)) {
+                    clearInterval(timerInterval);
+                    lv++;
+                    levelDisplay.textContent = lv;
+                    gameState = 'start';
+                    gameWin();
+                    return;
+                  }
+                  shuffleUntilValid();
+                  drawTiles();
+                }, 500);
+                return true;
+              }
+            }
+            setTimeout(() => {
+              selectedTiles = [];
+              drawTiles();
+            }, 500);
+          }
+        }
+        return false;
+      }
+
+      function getGrid() {
+        const grid = Array.from({ length: rows + 2 }, () => Array(cols + 2).fill(0));
+        tiles.forEach((tile, i) => {
+          const x = i % cols;
+          const y = Math.floor(i / cols);
+          if (!tile.hidden) grid[y + 1][x + 1] = 1;
+        });
+        return grid;
+      }
+
+      function canConnect(tile1, tile2) {
+        const grid = getGrid();
+        const startX = Math.round(tile1.x / tileSize) + 1;
+        const startY = Math.round(tile1.y / tileSize) + 1;
+        const endX = Math.round(tile2.x / tileSize) + 1;
+        const endY = Math.round(tile2.y / tileSize) + 1;
+        const queue = [];
+        const visited = new Set();
+        const dirs = [
+          { dx: 0, dy: -1 }, { dx: 1, dy: 0 },
+          { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+        ];
+
+        for (let d = 0; d < 4; d++) {
+          const nx = startX + dirs[d].dx;
+          const ny = startY + dirs[d].dy;
+          if (grid[ny][nx] === 0 || (nx === endX && ny === endY)) {
+            queue.push({ x: nx, y: ny, dir: d, turns: 0, path: [{ x: startX, y: startY }, { x: nx, y: ny }] });
+            visited.add(`${nx},${ny},${d}`);
+          }
+        }
+
+        while (queue.length > 0) {
+          const { x, y, dir, turns, path } = queue.shift();
+          if (turns > 2) continue;
+          if (x === endX && y === endY) return path;
+
+          for (let d = 0; d < 4; d++) {
+            const nx = x + dirs[d].dx;
+            const ny = y + dirs[d].dy;
+            const newTurns = d === dir ? turns : turns + 1;
+            const key = `${nx},${ny},${d}`;
+            if (grid[ny]?.[nx] === 0 || (nx === endX && ny === endY)) {
+                queue.push({ x: nx, y: ny, dir: d, turns: newTurns, path: [...path, { x: nx, y: ny }] });
+                visited.add(key);
+            }
+          }
+        }
+        return null;
+      }
+
+      function existsValidMove() {
+        const available = tiles.filter(t => !t.hidden);
+        for (let i = 0; i < available.length; i++) {
+          for (let j = i + 1; j < available.length; j++) {
+            if (available[i].icon === available[j].icon && canConnect(available[i], available[j])) {
+              return { a: available[i], b: available[j] };
+            }
+          }
+        }
+        return null;
+      }
+
+      function shuffleUntilValid() {
+        if (existsValidMove()) return;
+        let icons = tiles.filter(t => !t.hidden).map(t => t.icon);
+        do {
+          shuffleArray(icons);
+          let k = 0;
+          tiles.forEach(t => {
+            if (!t.hidden) t.icon = icons[k++];
+          });
+        } while (!existsValidMove());
+      }
+
+      function drawPath(path) {
+        ctx.strokeStyle = 'lime';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        path.forEach((p, i) => {
+          const px = (p.x - 1 + 0.5) * tileSize;
+          const py = (p.y - 1 + 0.5) * tileSize + 130;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      }
+
+      function preloadIcons(list) {
+        const tasks = list.map(src => new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload  = () => { imageCache[src] = img; resolve(); };
+          img.onerror = () => { console.warn('Không tải được', src); resolve(); };
+          img.src = src;
+        }));
+        return Promise.all(tasks);          
+      }
+
+      //shuffle
+      function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      //init tiles
+      function initTiles() {
+        tiles = [];
+        const pairs = [];
+        const totalTiles = cols * rows;
+        if (totalTiles % 2 !== 0) {
+          alert("Total number of tiles must be even!");
+          return;
+        }
+      
+        let len = lv * 4;
+        if (len > icons.length) len = icons.length;
+        for (let i = 0; i < totalTiles / 2; i++) { 
+          const icon = icons[Math.floor(Math.random() * len)];
+          pairs.push(icon, icon);
+        }
+      
+        shuffleArray(pairs);
+      
+        for (let i = 0; i < totalTiles; i++) {
+          const x = i % cols;
+          const y = Math.floor(i / cols);
+          tiles.push({
+            icon: pairs[i],
+            x: x * tileSize, 
+            y: y * tileSize,
+            hidden: false
+          });
+        }
+      }
+
+      //start timer
+      function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = Math.floor(30 * Math.pow(lv, 1.5));
+        timerInterval = setInterval(() => {
+          timeLeft--;
+          timeDisplay.textContent = timeLeft;
+          if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            gameOver();
+          }
+        }, 800);
+      }
+
+
+      //draw tiles
+      function drawTiles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.imageSmoothingEnabled=false;
+        
+        const bg = imageCache[BACKGROUND_SRC];
+        if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+        tiles.forEach(tile => {
+          if (tile.hidden) return;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+          ctx.fillRect(tile.x, tile.y + 130, tileSize, tileSize);
+
+          const icon = tile.icon;
+          let img = imageCache[icon];
+
+          const offset = tileSize * 0.1;
+          const scaleSize = tileSize * 0.8;
+          ctx.drawImage(img, tile.x + offset, tile.y + offset + 130, scaleSize, scaleSize);
+        });
+
+        if (gameState === 'playing') {
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 5;
+          ctx.strokeRect(
+            selectedPos.x * tileSize + 2,
+            selectedPos.y * tileSize + 2 + 130,
+            tileSize - 4,
+            tileSize - 4
+          );
+        }
+
+        selectedTiles.forEach(tile => {
+          ctx.strokeStyle = 'blue';
+          ctx.lineWidth = 5;
+          ctx.strokeRect(tile.x + 4, tile.y + 4 + 130, tileSize - 8, tileSize - 8);
+        });
+
+        hintTiles.forEach(tile => {
+          ctx.strokeStyle = 'cyan';
+          ctx.lineWidth = 10;
+          ctx.strokeRect(tile.x + 4, tile.y + 4 + 130, tileSize - 8, tileSize - 8);
+        });
+
+      }
+
+      function startGame() {
+        levelDisplay.textContent = lv;
+        scoreDisplay.textContent = score;
+        gameState = 'playing';
+        startScreen.style.display = 'none';
+        resetGame();
+        // Initialize Farcade SDK
+        window.FarcadeSDK.singlePlayer.actions.ready();
+      }
+
+      let tileRaw = 160 / 1.25;
+      function resetGame() {
+        const scale = Math.floor(1 + lv * 0.5);
+        rows = 4 * scale;
+        cols = 3 * scale;
+       
+        resizeCanvas();
+        initTiles();
+        gameState = 'playing';
+        gameOverScreen.style.display = 'none';
+        startTimer();
+        drawTiles();
+      }
+
+      function getGridPos(clientX, clientY) {
+        const rect   = canvas.getBoundingClientRect();   
+        const scaleX = canvas.width  / rect.width;       
+        const scaleY = canvas.height / rect.height;
+    
+        const cx = (clientX - rect.left) * scaleX;
+        const cy = (clientY - rect.top)  * scaleY - 120;
+    
+        return {
+          x: Math.floor(cx / tileSize),
+          y: Math.floor(cy / tileSize)
+        };
+      }
+
+      canvas.addEventListener('click', (e) => {
+        console.log(gameState)
+        if (gameState !== 'playing') return;
+
+        const pos = getGridPos(e.clientX, e.clientY);
+        if (pos.x < 0 || pos.x >= cols || pos.y < 0 || pos.y >= rows) return;
+
+        selectedPos = pos;   
+        const drewPath = handleEnter();        
+        if (!drewPath) drawTiles();    
+      });
+
+      canvas.style.touchAction = 'none';      
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (gameState !== 'playing') return;
+    
+        e.preventDefault();                    
+    
+        const touch = e.touches[0];            
+        const pos   = getGridPos(touch.clientX, touch.clientY);
+    
+        if (pos.x < 0 || pos.x >= cols || pos.y < 0 || pos.y >= rows) return;
+    
+        selectedPos = pos;
+    
+        const drewPath = handleEnter();        
+        if (!drewPath) drawTiles();            
+      });
+
+      function gameOver() {
+        lv = 1;
+        score = 0;
+        selectedTiles = [];
+        hintTiles = [];
+
+        gameState = 'gameover'
+        gameOverScreen.style.display = 'block'
+        finalScoreDisplay.textContent = Math.floor(score)
+        content.textContent = 'GAME OVER'
+        // Report score to Farcade SDK
+        window.FarcadeSDK.singlePlayer.actions.gameOver({
+          score: Math.floor(score),
+        })
+      }
+
+      function check() {
+        if (gameState === 'paused') {
+          gameState = 'playing';
+          gameOverScreen.style.display = 'none';
+        } else if (gameState === 'gameover') {
+          startGame();
+          gameState = 'playing';
+        }
+      }
+      
+      function noenoughPoint() {
+        gameOverScreen.style.display = 'block'
+        finalScoreDisplay.textContent = Math.floor(score)
+        content.textContent = 'NO ENOUGH POINT';
+        gameState = 'paused';
+      }
+
+      function gameWin() {
+        drawTiles();
+        gameState = 'gameover'
+        gameOverScreen.style.display = 'block'
+        finalScoreDisplay.textContent = Math.floor(score)
+        content.textContent = 'YOU WIN'
+      }
+
+   
+      // function gameLoop() {
+      //   drawTiles();
+      //   requestAnimationFrame(gameLoop);
+      // }
+      
+      //Handle window resize
+      function resizeCanvas() {
+        const container = document.querySelector('.game-container');
+        const rect = container.getBoundingClientRect();
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+        tileSize = Math.min(canvas.width / cols, canvas.height / rows);
+      }
+
+    
+
+      window.addEventListener('resize', resizeCanvas)
+      resizeCanvas();
+
+      preloadIcons(icons).then(() => {
+        console.log('Đã preload xong ' + icons.length + ' ảnh');
+        // requestAnimationFrame(gameLoop);     
+      });
+
+
+    </script>
+  </body>
+</html>
