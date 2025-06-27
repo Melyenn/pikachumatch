@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pikachu Game</title>
+    <title>Pikachu Match</title>
     <link rel="icon" href="https://cdn.jsdelivr.net/gh/Melyenn/pokemonGame@main/img/0.png" type="image/x-icon" />
     <script src="https://unpkg.com/@farcade/game-sdk@latest/dist/index.min.js"></script>
     <style>
@@ -72,7 +72,7 @@
         text-align: center;
         color: #0ff;
         font-family: 'Arial', sans-serif;
-        font-size: 21px;
+        font-size: 1rem;
         text-shadow: 0 0 10px #0ff;
         z-index: 2;
         display: flex;
@@ -81,6 +81,7 @@
         justify-content: center;
         background: black;
         gap: .25rem;
+        flex-wrap: wrap;
       }
 
       .screen {
@@ -147,18 +148,18 @@
         <div id="ui">
           Level: <span id="lv">1</span>|
           Score: <span id="score">0</span>| 
-          Time left: <span id="time">0</span>s
+          Time: <span id="time">0</span>s
           <button id="hint" onclick="openHint(); this.blur();">Hint</button>        
         </div>
 
 
         <div id="startScreen" class="screen">
-          <h1>PIKACHU</h1>
+          <h1>PIKACHU MATCH</h1>
           <!-- <p>Avoid the walls!</p> -->
           <!-- <p>← → to move</p> -->
           <!-- <p>Press Space to Start</p> -->
           <p>Match 2 same </p>
-          <p>← → to move</p>
+          <p>← ↑ ↓ →to move</p>
           <p>Press Enter/ click/ touch to select tiles</p>
           <p>Press H or click Hint to buy hint (30p/ hint)</p>
           <button onclick="startGame()">
@@ -213,9 +214,9 @@
       let selectedPos = { x: 0, y: 0 };
       let timerInterval;
       
-      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pokemon@main/img/';
+      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/img/';
       const icons = Array.from({ length: 21 }, (_, i) => `${CDN_BASE}${i}.png`);
-      const BACKGROUND_SRC = 'https://cdn.jsdelivr.net/gh/Melyenn/pokemon@main/background/bg.png';
+      const BACKGROUND_SRC = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/background/bg.png';
       icons.push(BACKGROUND_SRC);
 
 
@@ -254,6 +255,7 @@
         if (gameState != 'playing') return;
         if (score >= 30) {
           score -= 30;
+          scoreDisplay.textContent = score;
         } else {
           noenoughPoint(); 
           return; 
@@ -285,6 +287,7 @@
             if (a.icon === b.icon) {
               const path = canConnect(a, b);
               if (path) {
+                window.FarcadeSDK.singlePlayer.actions.hapticFeedback();
                 score += 5 * lv;
                 scoreDisplay.textContent = score;
                 a.hidden = true;
@@ -298,7 +301,9 @@
                     lv++;
                     levelDisplay.textContent = lv;
                     gameState = 'start';
-                    gameWin();
+                    selectedTiles = [];
+                    hintTiles = [];
+                    startGame();
                     return;
                   }
                   shuffleUntilValid();
@@ -455,7 +460,7 @@
       //start timer
       function startTimer() {
         clearInterval(timerInterval);
-        timeLeft = Math.floor(30 * Math.pow(lv, 1.5));
+        timeLeft = Math.floor(45 * Math.pow(lv, 1.75));
         timerInterval = setInterval(() => {
           timeLeft--;
           timeDisplay.textContent = timeLeft;
@@ -581,11 +586,6 @@
       });
 
       function gameOver() {
-        lv = 1;
-        score = 0;
-        selectedTiles = [];
-        hintTiles = [];
-
         gameState = 'gameover'
         gameOverScreen.style.display = 'block'
         finalScoreDisplay.textContent = Math.floor(score)
@@ -594,6 +594,10 @@
         window.FarcadeSDK.singlePlayer.actions.gameOver({
           score: Math.floor(score),
         })
+        lv = 1;
+        score = 0;
+        selectedTiles = [];
+        hintTiles = [];
       }
 
       function check() {
@@ -611,14 +615,6 @@
         finalScoreDisplay.textContent = Math.floor(score)
         content.textContent = 'NO ENOUGH POINT';
         gameState = 'paused';
-      }
-
-      function gameWin() {
-        drawTiles();
-        gameState = 'gameover'
-        gameOverScreen.style.display = 'block'
-        finalScoreDisplay.textContent = Math.floor(score)
-        content.textContent = 'YOU WIN'
       }
 
    
@@ -641,12 +637,21 @@
       window.addEventListener('resize', resizeCanvas)
       resizeCanvas();
 
-      preloadIcons(icons).then(() => {
-        console.log('Đã preload xong ' + icons.length + ' ảnh');
-        // requestAnimationFrame(gameLoop);     
+      // preloadIcons(icons).then(() => {
+      //   //console.log('Đã preload xong ' + icons.length + ' ảnh');  
+      //   // requestAnimationFrame(gameLoop);     
+      // });
+
+      window.FarcadeSDK?.on?.('play_again', () => {
+        startGame();        
+      });
+      
+      window.FarcadeSDK?.on?.('toggle_mute', (data) => {
       });
 
 
+      preloadIcons(icons);
     </script>
   </body>
 </html>
+
