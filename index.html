@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pikachu Match</title>
-    <link rel="icon" href="https://cdn.jsdelivr.net/gh/Melyenn/pokemonGame@main/img/0.png" type="image/x-icon" />
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/Melyenn/pokemonGame@main/coins/1.png" type="image/x-icon" />
     <script src="https://unpkg.com/@farcade/game-sdk@latest/dist/index.min.js"></script>
     <style>
       body {
@@ -139,6 +139,9 @@
     </style>
   </head>
   <body>
+    <audio id="bgm" src="audio/music.mp3" loop preload="auto"></audio>
+    <audio id="newlv" src="audio/lv.mp3" preload="auto"></audio>
+
     <div class="emulator-frame">
       <div class="emulator-header">
         <div>Pikachu</div>
@@ -214,7 +217,7 @@
       let selectedPos = { x: 0, y: 0 };
       let timerInterval;
       
-      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/img/';
+      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/coins/';
       const icons = Array.from({ length: 21 }, (_, i) => `${CDN_BASE}${i}.png`);
       const BACKGROUND_SRC = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/background/bg.png';
       icons.push(BACKGROUND_SRC);
@@ -299,6 +302,7 @@
                   if (tiles.every(t => t.hidden)) {
                     clearInterval(timerInterval);
                     lv++;
+                    document.getElementById('newlv').play();
                     levelDisplay.textContent = lv;
                     gameState = 'start';
                     selectedTiles = [];
@@ -523,6 +527,9 @@
         gameState = 'playing';
         startScreen.style.display = 'none';
         resetGame();
+
+        document.getElementById('bgm').play();
+
         // Initialize Farcade SDK
         window.FarcadeSDK.singlePlayer.actions.ready();
       }
@@ -586,6 +593,9 @@
       });
 
       function gameOver() {
+        document.getElementById('bgm').pause();
+        document.getElementById('bgm').currentTime = 0;
+
         gameState = 'gameover'
         gameOverScreen.style.display = 'block'
         finalScoreDisplay.textContent = Math.floor(score)
