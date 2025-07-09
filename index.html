@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pikachu Match</title>
-    <link rel="icon" href="https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/img/1.png" type="image/x-icon" />
+    <title>COIN Match</title>
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/imgcoins/1.png" type="image/x-icon" />
     <script src="https://unpkg.com/@farcade/game-sdk@latest/dist/index.min.js"></script>
     <style>
       body {
@@ -157,7 +157,7 @@
 
 
         <div id="startScreen" class="screen">
-          <h1>PIKACHU MATCH</h1>
+          <h1>COIN MATCH</h1>
           <!-- <p>Avoid the walls!</p> -->
           <!-- <p>← → to move</p> -->
           <!-- <p>Press Space to Start</p> -->
@@ -217,9 +217,9 @@
       let selectedPos = { x: 0, y: 0 };
       let timerInterval;
       
-      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/icons/';
+      const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/imgcoins/';
       const icons = Array.from({ length: 20}, (_, i) => `${CDN_BASE}${i}.png`);
-      const BACKGROUND_SRC = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/background/bg.png';
+      const BACKGROUND_SRC = 'https://cdn.jsdelivr.net/gh/Melyenn/pikachumatch@main/background/bg1.png';
       icons.push(BACKGROUND_SRC);
 
 
